@@ -90,7 +90,7 @@ def direct_mapping_1Order(old_image, factor):
 
 def convert_to_gray(rgb_image):
     # Convert the RGB image to grayscale using the formula: gray = 0.3RED + 0.59GREEN + 0.11BLUE
-    gray_image = (0.3 * rgb_image[:, :, 0]) + (0.3 * rgb_image[:, :, 1]) + (0.3 * rgb_image[:, :, 2])
+    gray_image = (0.3 * rgb_image[:, :, 0]) + (0.59 * rgb_image[:, :, 1]) + (0.11 * rgb_image[:, :, 2])
 
     return gray_image.astype(np.uint8)
 
