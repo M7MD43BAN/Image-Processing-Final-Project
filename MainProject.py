@@ -112,13 +112,6 @@ def histogram_plot(image):
             for j in range(image.shape[1]):
                 histogram[image[i, j]] += 1
 
-        # Draw plot histogram
-        plt.bar(range(256), histogram, color='k')
-        # The plt.xlim() function sets the x-axis limits to be between 0 and 256
-        plt.xlim([0, 256])
-        plt.suptitle('Histogram of Gray Image')
-        plt.show()
-
     # Calculate histogram values for RGB color image
     elif len(image.shape) == 3:
         [row, column, channel] = image.shape
@@ -128,17 +121,7 @@ def histogram_plot(image):
                 for j in range(column):
                     histogram[image[i, j, k], k] += 1
 
-        # Draw plot histogram
-        # plt.subplots(): specifying 1 row and 3 columns to create a grid of 3 subplots.
-        fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-
-        colors = ['Blue', 'Green', 'Red']
-        for i, color in enumerate(colors):
-            axs[i].bar(range(256), histogram[:, i], color=color)
-            axs[i].set_xlim([0, 256])
-
-        plt.suptitle('Histogram of RGB Image')
-        plt.show()
+    return histogram
 
 
 # endregion
@@ -254,6 +237,30 @@ def histogram_equalization(image):
 # endregion
 
 # region 8. Histogram Matching
+
+def histogram_matching(first_image, second_image):
+    # Compute histograms of the input images
+    histogram1 = histogram_plot(first_image)
+    histogram2 = histogram_plot(second_image)
+
+    # Compute cumulative distribution functions (CDFs) of the input images
+    cumulative_distribution_function1 = np.cumsum(histogram1) / first_image.size
+    cumulative_distribution_function2 = np.cumsum(histogram2) / second_image.size
+
+    # Create a lookup table to map intensity levels from img to img2
+    map_array = np.zeros((256,), dtype=np.uint8)
+    for i in range(256):
+        diff = np.abs(cumulative_distribution_function1[i] - cumulative_distribution_function2)
+        ind = np.argmin(diff)
+        map_array[i] = ind
+
+    # Apply the mapping function to the input image
+    new_image = map_array[first_image]
+
+    # Compute histogram of the output image
+    new_image_histogram = histogram_plot(new_image)
+
+    return new_image, new_image_histogram
 
 # endregion
 
