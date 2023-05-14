@@ -262,6 +262,7 @@ def histogram_matching(first_image, second_image):
 
     return new_image, new_image_histogram
 
+
 # endregion
 
 # region 9. Add Two Images
@@ -601,7 +602,7 @@ def ideal_high_pass(image, radius):
     img_filtered = np.fft.ifft2(back_is_shift_masked, axes=(0, 1))
     img_filtered = np.abs(img_filtered).clip(0, 255).astype(np.uint8)
 
-    return img_filtered, mask
+    return img_filtered
 
 
 # endregion
