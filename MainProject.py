@@ -173,6 +173,10 @@ def direct_mapping_1Order(old_image, factor):
 
 # region Reverse Mapping 0-Order
 
+# Create a function for Resizing Reverse Mapping: 0-Order algorithm
+# First parameter: Input image that will be resized
+# Second parameter: resizing factor along the horizontal axis
+# Third parameter: resizing factor along the vertical axis
 def reverse_mapping_0Order(image, row_factor, column_factor):
     if len(image.shape) == 3:
         # Seeing the shape width (row) and height (column) and channels
@@ -225,7 +229,84 @@ def reverse_mapping_0Order(image, row_factor, column_factor):
 
 # endregion
 
-# region Reverse Mapping 1-Order
+# region Reverse Mapping 1-Order (Bilinear Resizing)
+
+# Create a function for Resizing Reverse Mapping: 1-Order algorithm
+# First parameter: Input image that will be resized
+# Second parameter: resizing factor along the horizontal axis
+# Third parameter: resizing factor along the vertical axis
+def reverse_mapping_1Order(image, row_factor, column_factor):
+    if len(image.shape) == 3:
+        # Seeing the shape width (row) and height (column) and channels
+        # of the image using shape attribute.
+        [row, column, channel] = image.shape
+
+        # calculate the new dimensions of the resized image using `factor`.
+        new_row = int(row * row_factor)
+        new_column = int(column * column_factor)
+
+        # calculate the ratio to access the pixels in old image.
+        row_ratio = row / new_row
+        column_ratio = column / new_column
+
+        # Creating a new matrix of zeros with the new dimensions of the resized image.
+        # We use the zeros function of NumPy to create this new matrix.
+        # We also specify the data type of the matrix as unsigned 8-bit integers using the dtype argument.
+        new_image = np.zeros([new_row, new_column, channel], dtype=np.uint8)
+
+        # We iterate over each channel of the image using k
+        # Then for each pixel in the image using new_x and new_y
+        for k in range(channel):
+            for new_x in range(new_row):
+                old_x = new_x * row_ratio
+                x1 = int(old_x)
+                x_fraction = abs(old_x - x1)
+
+                for new_y in range(new_column):
+                    old_y = new_y * column_ratio
+                    y1 = int(old_y)
+                    p1 = image[x1, y1, k]
+                    p2 = image[x1, y1, k]
+
+                    y_fraction = abs(old_y - y1)
+                    z1 = p1 * (1 - x_fraction) + p2 * x_fraction
+
+                    new_pixel = z1 * (1 - y_fraction) + z1 * y_fraction
+                    new_image[new_x, new_y, k] = int(new_pixel)
+
+        return new_image
+
+    if len(image.shape) == 2:
+        [row, column] = image.shape
+
+        new_row = int(row * row_factor)
+        new_column = int(column * column_factor)
+
+        row_ratio = row / new_row
+        column_ratio = column / new_column
+
+        new_image = np.zeros([new_row, new_column], dtype=np.uint8)
+
+        for new_x in range(new_row):
+            old_x = new_x * row_ratio
+            x1 = int(old_x)
+            x_fraction = abs(old_x - x1)
+
+            for new_y in range(new_column):
+                old_y = new_y * column_ratio
+                y1 = int(old_y)
+                p1 = image[x1, y1]
+                p2 = image[x1, y1]
+
+                y_fraction = abs(old_y - y1)
+                z1 = p1 * (1 - x_fraction) + p2 * x_fraction
+
+                new_pixel = z1 * (1 - y_fraction) + z1 * y_fraction
+                new_image[new_x, new_y] = int(new_pixel)
+
+        return new_image
+
+
 # endregion
 
 # region Convert to Gray
