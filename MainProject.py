@@ -1,89 +1,234 @@
 import math
-
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 
 
-# region 1. Direct Mapping 1-Order
+# region Direct Mapping 0-Order
+
+# Create a function for Resizing Direct Mapping: 0-Order algorithm
+# First parameter: Input image that will be resized
+# Second parameter: resizing factor along the horizontal and the vertical axes
+def direct_mapping_0Order(image, factor):
+    if len(image.shape) == 3:
+        # Seeing the shape width (row) and height (column) and channels
+        # of the image using shape attribute.
+        [row, column, channel] = image.shape
+
+        # calculate the new dimensions of the resized image using `factor`.
+        new_row = row * factor
+        new_column = column * factor
+
+        # Creating a new matrix of zeros with the new dimensions of the resized image.
+        # We use the zeros function of NumPy to create this new matrix.
+        # We also specify the data type of the matrix as unsigned 8-bit integers using the dtype argument.
+        new_image = np.zeros([new_row, new_column, channel], dtype=np.uint8)
+
+        # We iterate over each channel of the image using k
+        # Then for each pixel in the image using i and j
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_image[i * factor:i * factor + factor, j * factor:j * factor + factor, k] = image[i, j, k]
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+
+        new_row = row * factor
+        new_column = column * factor
+
+        new_image = np.zeros([new_row, new_column], dtype=np.uint8)
+
+        for i in range(row):
+            for j in range(column):
+                new_image[i * factor:i * factor + factor, j * factor:j * factor + factor] = image[i, j]
+
+        return new_image
+
+
+# endregion
+
+# region Direct Mapping 1-Order
 
 # Create a function for Resizing Direct Mapping: 1-Order algorithm
 # First parameter: Input image that will be resized
 # Second parameter: resizing factor along the horizontal and the vertical axes
 def direct_mapping_1Order(old_image, factor):
-    # Saving the shape width (row) and height (column) and channels
-    # of the image using shape attribute.
-    [row, column, channel] = old_image.shape
+    if len(old_image.shape) == 3:
+        # Saving the shape width (row) and height (column) and channels
+        # of the image using shape attribute.
+        [row, column, channel] = old_image.shape
 
-    # calculate the new dimensions of the resized image using `factor`.
-    new_row = row * factor
-    new_column = column * factor
+        # calculate the new dimensions of the resized image using `factor`.
+        new_row, new_column = row * factor, column * factor
 
-    # Creating a new matrix of zeros with the new dimensions of the resized image.
-    # We use the zeros function of NumPy to create this new matrix.
-    # We also specify the data type of the matrix as unsigned 8-bit integers using the dtype argument.
-    resized_image = np.zeros([new_row, new_column, channel], dtype=np.uint8)
+        # Creating a new matrix of zeros with the new dimensions of the resized image.
+        # We use the zeros function of NumPy to create this new matrix.
+        # We also specify the data type of the matrix as unsigned 8-bit integers using the dtype argument.
+        resized_image = np.zeros([new_row, new_column, channel], dtype=np.uint8)
 
-    # Copying an old values of the old image into the new image that will be resized
-    # We iterate over each channel of the image using k
-    # Then for each pixel in the image using i and j multiplying by the factor
-    for k in range(channel):
+        # Copying an old values of the old image into the new image that will be resized
+        # We iterate over each channel of the image using k
+        # Then for each pixel in the image using i and j multiplying by the factor
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    resized_image[i * factor, j * factor, k] = old_image[i, j, k]
+
+        # We iterate throw each row to fill the gaps between the pixels in the resized image.
+        # Filling in the rows by comparing adjacent pixel values in each row using linear interpolation
+        for k in range(channel):
+            for i in range(0, new_row, factor):
+                for j in range(0, new_column - factor, factor):
+                    # Saving the maximum and minimum pixels from the resized image
+                    minimum = resized_image[i, j, k]
+                    maximum = resized_image[i, j + factor, k]
+                    # Case of from top (minimum) to bottom (maximum)
+                    if maximum > minimum:
+                        for pixel in range(1, factor):
+                            # Pixel(i) = Round(((Max - Min)/Fact)*i + Min))
+                            resized_image[i, j + pixel, k] = round(((maximum - minimum) / factor) * pixel + minimum)
+                    # Case of from bottom (minimum) to top (maximum)
+                    else:
+                        for pixel in range(1, factor):
+                            # Pixel(i) = Round(((Min - Max)/Fact)*i + Max))
+                            resized_image[i, j + factor - pixel, k] = round(
+                                ((minimum - maximum) / factor) * pixel + maximum
+                            )
+                # The rest of pixels that not between min and max pixels
+                resized_image[i, new_column - factor + 1:new_column, k] = resized_image[i, new_column - factor, k]
+
+        # We iterate throw each column to fill the gaps between the pixels in the resized image.
+        # Filling in the column by comparing adjacent pixel values in each column using linear interpolation
+        for k in range(channel):
+            for j in range(0, new_column):
+                for i in range(0, new_row - factor, factor):
+                    # Saving the maximum and minimum pixels from the resized image
+                    minimum = resized_image[i, j, k]
+                    maximum = resized_image[i + factor, j, k]
+                    # Case of from right (minimum) to left (maximum)
+                    if maximum > minimum:
+                        for pixel in range(1, factor):
+                            # Pixel(i)= Round(((Max - Min)/Fact)*i + Min))
+                            resized_image[i + pixel, j, k] = int(
+                                round(((maximum - minimum) / factor) * pixel + minimum))
+                    # Case of from left (minimum) to right (maximum)
+                    else:
+                        for pixel in range(1, factor):
+                            # Pixel(i)= Round(((Min - Max)/Fact)*i + Max))
+                            resized_image[i + factor - pixel, j, k] = round(
+                                ((minimum - maximum) / factor) * pixel + maximum
+                            )
+                # The rest of pixels that not between min and max pixels
+                resized_image[new_row - factor:new_row, j, k] = resized_image[new_row - factor, j, k]
+
+        return resized_image
+
+    elif len(old_image.shape) == 2:
+        [row, column] = old_image.shape
+        new_row, new_column = row * factor, column * factor
+
+        resized_image = np.zeros([new_row, new_column], dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                resized_image[i * factor, j * factor, k] = old_image[i, j, k]
+                resized_image[i * factor, j * factor] = old_image[i, j]
 
-    # We iterate throw each row to fill the gaps between the pixels in the resized image.
-    # Filling in the rows by comparing adjacent pixel values in each row using linear interpolation
-    for k in range(channel):
         for i in range(0, new_row, factor):
-            for j in range(0, new_column - factor - 1, factor):
-                # Saving the maximum and minimum pixels from the resized image
-                minimum = resized_image[i, j, k]
-                maximum = resized_image[i, j + factor, k]
-                # Case of from top (minimum) to bottom (maximum)
+            for j in range(0, new_column - factor, factor):
+                minimum = resized_image[i, j]
+                maximum = resized_image[i, j + factor]
+
                 if maximum > minimum:
                     for pixel in range(1, factor):
-                        # Pixel(i) = Round(((Max - Min)/Fact)*i + Min))
-                        resized_image[i, j + pixel, k] = round(((maximum - minimum) / factor) * pixel + minimum)
-                # Case of from bottom (minimum) to top (maximum)
+                        resized_image[i, j + pixel] = round(((maximum - minimum) / factor) * pixel + minimum)
                 else:
                     for pixel in range(1, factor):
-                        # Pixel(i) = Round(((Min - Max)/Fact)*i + Max))
-                        resized_image[i, j + factor - pixel, k] = round(
-                            ((minimum - maximum) / factor) * pixel + maximum
-                        )
-            # The rest of pixels that not between min and max pixels
-            resized_image[i, new_column - factor + 1:new_column, k] = resized_image[i, new_column - factor, k]
+                        resized_image[i, j + factor - pixel] = round(((minimum - maximum) / factor) * pixel + maximum)
 
-    # We iterate throw each column to fill the gaps between the pixels in the resized image.
-    # Filling in the column by comparing adjacent pixel values in each column using linear interpolation
-    for k in range(channel):
+            resized_image[i, new_column - factor + 1:new_column] = resized_image[i, new_column - factor]
+
         for j in range(0, new_column):
-            for i in range(0, new_row - factor - 1, factor):
-                # Saving the maximum and minimum pixels from the resized image
-                minimum = resized_image[i, j, k]
-                maximum = resized_image[i + factor, j, k]
-                # Case of from right (minimum) to left (maximum)
+            for i in range(0, new_row - factor, factor):
+                minimum = resized_image[i, j]
+                maximum = resized_image[i + factor, j]
+
                 if maximum > minimum:
                     for pixel in range(1, factor):
-                        # Pixel(i)= Round(((Max - Min)/Fact)*i + Min))
-                        resized_image[i + pixel, j, k] = int(round(((maximum - minimum) / factor) * pixel + minimum))
-                # Case of from left (minimum) to right (maximum)
+                        resized_image[i + pixel, j] = int(
+                            round(((maximum - minimum) / factor) * pixel + minimum))
                 else:
                     for pixel in range(1, factor):
                         # Pixel(i)= Round(((Min - Max)/Fact)*i + Max))
-                        resized_image[i + factor - pixel, j, k] = round(
+                        resized_image[i + factor - pixel, j] = round(
                             ((minimum - maximum) / factor) * pixel + maximum
                         )
-            # The rest of pixels that not between min and max pixels
-            resized_image[new_row - factor:new_row, j, k] = resized_image[new_row - factor, j, k]
 
-    return resized_image
+            resized_image[new_row - factor:new_row, j] = resized_image[new_row - factor, j]
+
+        return resized_image
 
 
 # endregion
 
-# region 2. Convert to Gray
+# region Reverse Mapping 0-Order
+
+def reverse_mapping_0Order(image, row_factor, column_factor):
+    if len(image.shape) == 3:
+        # Seeing the shape width (row) and height (column) and channels
+        # of the image using shape attribute.
+        [row, column, channel] = image.shape
+
+        # calculate the new dimensions of the resized image using `factor`.
+        new_row = int(row * row_factor)
+        new_column = int(column * column_factor)
+
+        # calculate the ratio to access the pixels in old image.
+        row_ratio = row / new_row
+        column_ratio = column / new_column
+
+        # Creating a new matrix of zeros with the new dimensions of the resized image.
+        # We use the zeros function of NumPy to create this new matrix.
+        # We also specify the data type of the matrix as unsigned 8-bit integers using the dtype argument.
+        new_image = np.zeros([new_row, new_column, channel], dtype=np.uint8)
+
+        # We iterate over each channel of the image using k
+        # Then for each pixel in the image using i and j
+        for k in range(channel):
+            for i in range(new_row):
+                old_x = int(i * row_ratio)
+                for j in range(new_column):
+                    old_y = int(j * column_ratio)
+                    new_image[i, j, k] = image[old_x, old_y, k]
+
+        return new_image
+
+    if len(image.shape) == 2:
+        [row, column] = image.shape
+
+        new_row = int(row * row_factor)
+        new_column = int(column * column_factor)
+
+        row_ratio = row / new_row
+        column_ratio = column / new_column
+
+        new_image = np.zeros([new_row, new_column], dtype=np.uint8)
+
+        for i in range(new_row):
+            old_x = int(i * row_ratio)
+            for j in range(new_column):
+                old_y = int(j * column_ratio)
+                new_image[i, j] = image[old_x, old_y]
+
+        return new_image
+
+
+# endregion
+
+# region Reverse Mapping 1-Order
+# endregion
+
+# region Convert to Gray
 
 # Create a function for converting RGB image to Gray image
 # First parameter: Input image that will be converted
@@ -97,7 +242,7 @@ def convert_to_gray(rgb_image):
 
 # endregion
 
-# region 3. Drawing The Histogram
+# region Drawing The Histogram
 
 # Create a function for histogram plot
 # First parameter: Input image that will be adjustment
@@ -126,7 +271,7 @@ def histogram_plot(image):
 
 # endregion
 
-# region 4. Contrast Adjustment
+# region Contrast Adjustment
 
 # Create a function for contrast adjustment (histogram stretch/shrink)
 # First parameter: Input image that will be adjustment
@@ -156,7 +301,7 @@ def contrast_adjustment(image, new_min, new_max):
 
 # endregion
 
-# region 5. Brightness Adjustment
+# region Brightness Adjustment
 
 # Create a function for brightness adjustment
 # First parameter: Input image that will be adjustment
@@ -180,7 +325,7 @@ def brightness_adjustment(image, offset):
 
 # endregion
 
-# region 6. Power Law
+# region Power Law
 
 # Create a function for power law transformations
 # First parameter: Input image that will be adjustment
@@ -200,7 +345,7 @@ def power_law(image, gamma):
 
 # endregion
 
-# region 7. Histogram Equalization
+# region Histogram Equalization
 
 # Create a function for histogram plot
 # First parameter: Input image that will be adjustment
@@ -231,7 +376,7 @@ def histogram_equalization(image):
 
 # endregion
 
-# region 8. Histogram Matching
+# region Histogram Matching
 
 def histogram_matching(first_image, second_image):
     # Compute histograms of the input images
@@ -260,7 +405,7 @@ def histogram_matching(first_image, second_image):
 
 # endregion
 
-# region 9. Add Two Images
+# region Add Two Images
 
 # Create a function for adding image to another image
 # First parameter: Input image that will be the original
@@ -290,7 +435,7 @@ def add_two_images(first_image, second_image):
 
 # endregion
 
-# region 10. Subtract Two Images
+# region Subtract Two Images
 
 # Create a function for adding image to another image
 # First parameter: Input image that will be the original
@@ -320,7 +465,7 @@ def subtract_two_images(first_image, second_image):
 
 # endregion
 
-# region 11. Image Negatives
+# region Image Negatives
 
 # Create a function for adding image to another image
 # First parameter: Input image that will be the original
@@ -339,7 +484,7 @@ def negative_image(image):
 
 # endregion
 
-# region 12. Quantization
+# region Quantization
 
 def quantization(image, number_of_bits):
     [row, column, channel] = image.shape
@@ -360,7 +505,7 @@ def quantization(image, number_of_bits):
 
 # endregion
 
-# region 13. Average Filter
+# region Average Filter
 
 def average_filter(image, mask_size):
     [row, column] = image.shape
@@ -381,7 +526,7 @@ def average_filter(image, mask_size):
 
 # endregion
 
-# region 14. Weighted (Gaussian) Filter
+# region Weighted (Gaussian) Filter
 
 def gaussian_kernel(size, sigma):
     x, y = np.meshgrid(np.arange(-size // 2 + 1, size // 2 + 1), np.arange(-size // 2 + 1, size // 2 + 1))
@@ -412,7 +557,7 @@ def gaussian_filter(image, size, sigma):
 
 # endregion
 
-# region 15. Sharpening Filter
+# region Sharpening Filter
 
 def sharpening(image):
     [row, column] = image.shape
@@ -474,7 +619,7 @@ def sharpening(image):
 
 # endregion
 
-# region 16. Edge Detection Filter
+# region Edge Detection Filter
 
 def edge_detection(image):
     [row, column] = image.shape
@@ -531,7 +676,7 @@ def edge_detection(image):
 
 # endregion
 
-# region 17. Unsharpened Filter
+# region Unsharpened Filter
 
 def unsharpened(image):
     gaussian_image = gaussian_filter(image, 5, 2)
@@ -542,7 +687,7 @@ def unsharpened(image):
 
 # endregion
 
-# region 18. Ideal Low Pass Filter
+# region Ideal Low Pass Filter
 
 def ideal_low_pass(image, radius):
     [row, column, channel] = image.shape
@@ -572,7 +717,7 @@ def ideal_low_pass(image, radius):
 
 # endregion
 
-# region 19. Ideal High Pass Filter
+# region Ideal High Pass Filter
 
 def ideal_high_pass(image, radius):
     [row, column, channel] = image.shape
@@ -602,7 +747,7 @@ def ideal_high_pass(image, radius):
 
 # endregion
 
-# region 20. Butterworth Low Pass Filter
+# region Butterworth Low Pass Filter
 
 def butterworth_low_pass(image, radius, n):
     [row, column, channel] = image.shape
@@ -630,7 +775,7 @@ def butterworth_low_pass(image, radius, n):
 
 # endregion
 
-# region 21. Butterworth High Pass Filter
+# region Butterworth High Pass Filter
 
 def butterworth_high_pass(image, radius, n):
     [row, column, channel] = image.shape
@@ -658,7 +803,7 @@ def butterworth_high_pass(image, radius, n):
 
 # endregion
 
-# region 22. Gaussian Low Pass Filter
+# region Gaussian Low Pass Filter
 
 def gaussian_low_pass(image, radius):
     [row, column, channel] = image.shape
@@ -686,7 +831,7 @@ def gaussian_low_pass(image, radius):
 
 # endregion
 
-# region 23. Gaussian High Pass Filter
+# region Gaussian High Pass Filter
 
 def gaussian_high_pass(image, radius):
     [row, column, channel] = image.shape
