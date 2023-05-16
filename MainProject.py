@@ -81,20 +81,16 @@ def direct_mapping_1Order(old_image, factor):
             for i in range(0, new_row, factor):
                 for j in range(0, new_column - factor, factor):
                     # Saving the maximum and minimum pixels from the resized image
-                    minimum = resized_image[i, j, k]
-                    maximum = resized_image[i, j + factor, k]
+                    x = resized_image[i, j, k]
+                    y = resized_image[i, j + factor, k]
+                    maximum = max(y, x)
+                    minimum = min(y, x)
+
                     # Case of from top (minimum) to bottom (maximum)
-                    if maximum > minimum:
-                        for pixel in range(1, factor):
-                            # Pixel(i) = Round(((Max - Min)/Fact)*i + Min))
-                            resized_image[i, j + pixel, k] = round(((maximum - minimum) / factor) * pixel + minimum)
-                    # Case of from bottom (minimum) to top (maximum)
-                    else:
-                        for pixel in range(1, factor):
-                            # Pixel(i) = Round(((Min - Max)/Fact)*i + Max))
-                            resized_image[i, j + factor - pixel, k] = round(
-                                ((minimum - maximum) / factor) * pixel + maximum
-                            )
+                    for pixel in range(1, factor):
+                        # Pixel(i) = Round(((Max - Min)/Fact)*i + Min))
+                        resized_image[i, j + pixel, k] = round(((maximum - minimum) / factor) * pixel + minimum)
+
                 # The rest of pixels that not between min and max pixels
                 resized_image[i, new_column - factor + 1:new_column, k] = resized_image[i, new_column - factor, k]
 
@@ -104,21 +100,17 @@ def direct_mapping_1Order(old_image, factor):
             for j in range(0, new_column):
                 for i in range(0, new_row - factor, factor):
                     # Saving the maximum and minimum pixels from the resized image
-                    minimum = resized_image[i, j, k]
-                    maximum = resized_image[i + factor, j, k]
+                    x = resized_image[i, j, k]
+                    y = resized_image[i + factor, j, k]
+                    maximum = max(y, x)
+                    minimum = min(y, x)
+
                     # Case of from right (minimum) to left (maximum)
-                    if maximum > minimum:
-                        for pixel in range(1, factor):
-                            # Pixel(i)= Round(((Max - Min)/Fact)*i + Min))
-                            resized_image[i + pixel, j, k] = int(
-                                round(((maximum - minimum) / factor) * pixel + minimum))
-                    # Case of from left (minimum) to right (maximum)
-                    else:
-                        for pixel in range(1, factor):
-                            # Pixel(i)= Round(((Min - Max)/Fact)*i + Max))
-                            resized_image[i + factor - pixel, j, k] = round(
-                                ((minimum - maximum) / factor) * pixel + maximum
-                            )
+                    for pixel in range(1, factor):
+                        # Pixel(i)= Round(((Max - Min)/Fact)*i + Min))
+                        resized_image[i + pixel, j, k] = int(
+                            round(((maximum - minimum) / factor) * pixel + minimum))
+
                 # The rest of pixels that not between min and max pixels
                 resized_image[new_row - factor:new_row, j, k] = resized_image[new_row - factor, j, k]
 
@@ -136,33 +128,26 @@ def direct_mapping_1Order(old_image, factor):
 
         for i in range(0, new_row, factor):
             for j in range(0, new_column - factor, factor):
-                minimum = resized_image[i, j]
-                maximum = resized_image[i, j + factor]
+                x = resized_image[i, j]
+                y = resized_image[i, j + factor]
+                maximum = max(y, x)
+                minimum = min(y, x)
 
-                if maximum > minimum:
-                    for pixel in range(1, factor):
-                        resized_image[i, j + pixel] = round(((maximum - minimum) / factor) * pixel + minimum)
-                else:
-                    for pixel in range(1, factor):
-                        resized_image[i, j + factor - pixel] = round(((minimum - maximum) / factor) * pixel + maximum)
+                for pixel in range(1, factor):
+                    resized_image[i, j + pixel] = round(((maximum - minimum) / factor) * pixel + minimum)
 
             resized_image[i, new_column - factor + 1:new_column] = resized_image[i, new_column - factor]
 
         for j in range(0, new_column):
             for i in range(0, new_row - factor, factor):
-                minimum = resized_image[i, j]
-                maximum = resized_image[i + factor, j]
+                x = resized_image[i, j]
+                y = resized_image[i + factor, j]
+                maximum = max(y, x)
+                minimum = min(y, x)
 
-                if maximum > minimum:
-                    for pixel in range(1, factor):
-                        resized_image[i + pixel, j] = int(
-                            round(((maximum - minimum) / factor) * pixel + minimum))
-                else:
-                    for pixel in range(1, factor):
-                        # Pixel(i)= Round(((Min - Max)/Fact)*i + Max))
-                        resized_image[i + factor - pixel, j] = round(
-                            ((minimum - maximum) / factor) * pixel + maximum
-                        )
+                for pixel in range(1, factor):
+                    resized_image[i + pixel, j] = int(
+                        round(((maximum - minimum) / factor) * pixel + minimum))
 
             resized_image[new_row - factor:new_row, j] = resized_image[new_row - factor, j]
 
