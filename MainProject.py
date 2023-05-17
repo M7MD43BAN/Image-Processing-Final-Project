@@ -373,20 +373,34 @@ def contrast_adjustment(image, new_min, new_max):
 # First parameter: Input image that will be adjustment
 # Second parameter: Offset that specify you want brightness or darkness image
 def brightness_adjustment(image, offset):
-    [row, column, channel] = image.shape
-    new_image = np.zeros([row, column, channel], dtype=np.uint8)
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
 
-    for k in range(channel):
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_value = image[i, j, k] + offset
+                    if new_value > 255:
+                        new_value = 255
+                    if new_value < 0:
+                        new_value = 0
+                    new_image[i, j, k] = new_value
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_value = image[i, j, k] + offset
+                new_value = image[i, j] + offset
                 if new_value > 255:
                     new_value = 255
                 if new_value < 0:
                     new_value = 0
-                new_image[i, j, k] = new_value
-
-    return new_image
+                new_image[i, j] = new_value
+        return new_image
 
 
 # endregion
