@@ -356,7 +356,9 @@ def contrast_adjustment(image, new_min, new_max):
         for k in range(channel):
             for i in range(row):
                 for j in range(column):
-                    new_value = ((image[i, j, k] - old_min[k]) / (old_max[k] - old_min[k])) * (new_max - new_min) + new_min
+                    # New Value = [(Old Value – Old Min)/(Old Max – Old Min)] × (New Max – New Min) + New Min
+                    new_value = ((image[i, j, k] - old_min[k]) / (old_max[k] - old_min[k])) * (
+                            new_max - new_min) + new_min
                     if new_value > 255:
                         new_value = 255
                     if new_value < 0:
@@ -376,7 +378,57 @@ def contrast_adjustment(image, new_min, new_max):
 
         for i in range(row):
             for j in range(column):
+                # New Value = [(Old Value – Old Min)/(Old Max – Old Min)] × (New Max – New Min) + New Min
                 new_value = ((image[i, j] - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+                if new_value > 255:
+                    new_value = 255
+                if new_value < 0:
+                    new_value = 0
+                new_image[i, j] = new_value
+
+        return new_image
+
+
+# endregion
+
+# region Normalization (0 : 255)
+
+def normalization(image):
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
+
+        # Find the minimum and maximum intensity values across the image.
+        old_min = np.amin(image, axis=(0, 1))
+        old_max = np.amax(image, axis=(0, 1))
+
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
+
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    # New Value = [(Old Value – Old Min)/(Old Max – Old Min)] × (New Max – New Min) + New Min
+                    new_value = ((image[i, j, k] - old_min[k]) / (old_max[k] - old_min[k])) * (255 - 0) + 0
+                    if new_value > 255:
+                        new_value = 255
+                    if new_value < 0:
+                        new_value = 0
+                    new_image[i, j, k] = new_value
+
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+
+        # Find the minimum and maximum intensity values across the image.
+        old_min = np.amin(image, axis=(0, 1))
+        old_max = np.amax(image, axis=(0, 1))
+
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
+        for i in range(row):
+            for j in range(column):
+                # New Value = [(Old Value – Old Min)/(Old Max – Old Min)] × (New Max – New Min) + New Min
+                new_value = ((image[i, j] - old_min) / (old_max - old_min)) * (255 - 0) + 0
                 if new_value > 255:
                     new_value = 255
                 if new_value < 0:
@@ -432,16 +484,30 @@ def brightness_adjustment(image, offset):
 # First parameter: Input image that will be adjustment
 # Second parameter: gamma value
 def power_law(image, gamma):
-    [row, column, channel] = image.shape
-    new_image = np.zeros([row, column, channel], dtype=np.uint8)
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
 
-    for k in range(channel):
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    # New Value = (Old Value) ^ Gamma
+                    new_value = image[i, j, k] ** gamma
+                    new_image[i, j, k] = new_value
+
+        return normalization(new_image)
+
+    if len(image.shape) == 2:
+        [row, column] = image.shape
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_value = int(((image[i, j, k] / 255.0) ** gamma) * 255.0)
-                new_image[i, j, k] = new_value
+                # New Value = (Old Value) ^ Gamma
+                new_value = image[i, j] ** gamma
+                new_image[i, j] = new_value
 
-    return new_image
+        return normalization(new_image)
 
 
 # endregion
@@ -451,28 +517,21 @@ def power_law(image, gamma):
 # Create a function for histogram plot
 # First parameter: Input image that will be adjustment
 def histogram_equalization(image):
-    global histogram
+    number_of_pixels = histogram_plot(image)
 
-    # Calculate histogram values for grayscale image
-    if len(image.shape) == 2:
-        histogram = np.zeros(256, dtype=np.uint8)
-        for i in range(image.shape[0]):
-            for j in range(image.shape[1]):
-                histogram[image[i, j]] += 1
+    # Calculate running sum
+    running_sum = np.zeros(256, dtype=int)
+    running_sum[0] = number_of_pixels[0]
+    for i in range(1, 256):
+        running_sum[i] = running_sum[i - 1] + number_of_pixels[i]
 
-        # Calculate running sum
-        running_sum = np.zeros(256, dtype=int)
-        running_sum[0] = histogram[0]
-        for i in range(1, 256):
-            running_sum[i] = running_sum[i - 1] + histogram[i]
+    # Calculate histogram equalization
+    pixels_sum = number_of_pixels.sum()
+    equalized_values = np.zeros(256, dtype=int)
+    for i in range(256):
+        equalized_values[i] = round((255 * running_sum[i]) / pixels_sum)
 
-        # Calculate histogram equalization
-        pixels_sum = histogram.sum()
-        equalized_values = np.zeros(256, dtype=int)
-        for i in range(256):
-            equalized_values[i] = int(round((255 * running_sum[i]) / pixels_sum))
-
-        return equalized_values
+    return equalized_values, number_of_pixels
 
 
 # endregion
@@ -480,23 +539,19 @@ def histogram_equalization(image):
 # region Histogram Matching
 
 def histogram_matching(first_image, second_image):
-    # Compute histograms of the input images
-    histogram1 = histogram_plot(first_image)
-    histogram2 = histogram_plot(second_image)
-
-    # Compute cumulative distribution functions (CDFs) of the input images
-    cumulative_distribution_function1 = np.cumsum(histogram1) / first_image.size
-    cumulative_distribution_function2 = np.cumsum(histogram2) / second_image.size
+    # Compute histograms equalization of the input images
+    equalization1, number_of_pixels_of_image1 = histogram_equalization(first_image)
+    equalization2, number_of_pixels_of_image2 = histogram_equalization(second_image)
 
     # Create a lookup table to map intensity levels from img to img2
-    map_array = np.zeros((256,), dtype=np.uint8)
+    matching = np.zeros((256,), dtype=np.uint8)
     for i in range(256):
-        diff = np.abs(cumulative_distribution_function1[i] - cumulative_distribution_function2)
+        diff = np.abs(equalization1[i] - equalization2)
         ind = np.argmin(diff)
-        map_array[i] = ind
+        matching[i] = ind
 
-    # Apply the mapping function to the input image
-    new_image = map_array[first_image]
+    # Apply the matching to the input image
+    new_image = matching[first_image]
 
     # Compute histogram of the output image
     new_image_histogram = histogram_plot(new_image)
@@ -598,8 +653,8 @@ def quantization(image, number_of_bits):
     for k in range(0, channel):
         for r in range(0, row):
             for c in range(0, column):
-                temp = image[r, c, k] // gap
-                new_image[r, c, k] = colors[temp]
+                new_pixel = image[r, c, k] // gap
+                new_image[r, c, k] = colors[new_pixel]
 
     return new_image
 
