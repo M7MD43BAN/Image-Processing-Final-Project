@@ -227,8 +227,8 @@ def reverse_mapping_1Order(image, row_factor, column_factor):
         [row, column, channel] = image.shape
 
         # calculate the new dimensions of the resized image using `factor`.
-        new_row = int(row * row_factor)
-        new_column = int(column * column_factor)
+        new_row = row * row_factor
+        new_column = column * column_factor
 
         # calculate the ratio to access the pixels in old image.
         row_ratio = row / new_row
@@ -245,18 +245,32 @@ def reverse_mapping_1Order(image, row_factor, column_factor):
             for new_x in range(new_row):
                 old_x = new_x * row_ratio
                 x1 = int(old_x)
+                if x1 == 0:
+                    x1 = 1
+                x2 = x1 + 1
+                if x2 >= row:
+                    x2 = row - 1
                 x_fraction = abs(old_x - x1)
 
                 for new_y in range(new_column):
                     old_y = new_y * column_ratio
                     y1 = int(old_y)
-                    p1 = image[x1, y1, k]
-                    p2 = image[x1, y1, k]
-
+                    if y1 == 0:
+                        y1 = 1
+                    y2 = y1 + 1
+                    if y2 >= column:
+                        y2 = column - 1
                     y_fraction = abs(old_y - y1)
-                    z1 = p1 * (1 - x_fraction) + p2 * x_fraction
 
-                    new_pixel = z1 * (1 - y_fraction) + z1 * y_fraction
+                    p1 = image[x1, y1, k]
+                    p2 = image[x2, y1, k]
+                    p3 = image[x1, y2, k]
+                    p4 = image[x2, y2, k]
+
+                    z1 = p1 * (1 - x_fraction) + p2 * x_fraction
+                    z2 = p3 * (1 - x_fraction) + p4 * x_fraction
+
+                    new_pixel = z1 * (1 - y_fraction) + z2 * y_fraction
                     new_image[new_x, new_y, k] = int(new_pixel)
 
         return new_image
@@ -264,8 +278,8 @@ def reverse_mapping_1Order(image, row_factor, column_factor):
     if len(image.shape) == 2:
         [row, column] = image.shape
 
-        new_row = int(row * row_factor)
-        new_column = int(column * column_factor)
+        new_row = row * row_factor
+        new_column = column * column_factor
 
         row_ratio = row / new_row
         column_ratio = column / new_column
@@ -275,18 +289,32 @@ def reverse_mapping_1Order(image, row_factor, column_factor):
         for new_x in range(new_row):
             old_x = new_x * row_ratio
             x1 = int(old_x)
+            if x1 == 0:
+                x1 = 1
+            x2 = x1 + 1
+            if x2 >= row:
+                x2 = row - 1
             x_fraction = abs(old_x - x1)
 
             for new_y in range(new_column):
                 old_y = new_y * column_ratio
                 y1 = int(old_y)
-                p1 = image[x1, y1]
-                p2 = image[x1, y1]
-
+                if y1 == 0:
+                    y1 = 1
+                y2 = y1 + 1
+                if y2 >= column:
+                    y2 = column - 1
                 y_fraction = abs(old_y - y1)
-                z1 = p1 * (1 - x_fraction) + p2 * x_fraction
 
-                new_pixel = z1 * (1 - y_fraction) + z1 * y_fraction
+                p1 = image[x1, y1]
+                p2 = image[x2, y1]
+                p3 = image[x1, y2]
+                p4 = image[x2, y2]
+
+                z1 = p1 * (1 - x_fraction) + p2 * x_fraction
+                z2 = p3 * (1 - x_fraction) + p4 * x_fraction
+
+                new_pixel = z1 * (1 - y_fraction) + z2 * y_fraction
                 new_image[new_x, new_y] = int(new_pixel)
 
         return new_image
@@ -567,26 +595,58 @@ def histogram_matching(first_image, second_image):
 # First parameter: Input image that will be the original
 # Second parameter: Input image that will be the added image as a watermark
 def add_two_images(first_image, second_image):
-    [row, column, channel] = first_image.shape
+    if len(first_image.shape) == 3 and len(second_image.shape) == 3:
 
-    # Make sure the two images have the same dimensions
-    second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
+        [row, column, channel] = first_image.shape
+        [row2, column2, channel2] = second_image.shape
 
-    # Convert the images to NumPy arrays
-    first_image = np.array(first_image, dtype=np.uint8)
-    second_image = np.array(second_image, dtype=np.uint8)
+        # Make sure the two images have the same dimensions
+        second_image = reverse_mapping_1Order(
+            second_image,
+            max(row, row2) // min(row, row2),
+            max(column, column2) // min(column, column)
+        )
 
-    # Create a new NumPy array with the same dimensions as the images
-    new_image = np.zeros((first_image.shape[0], first_image.shape[1], 3), dtype=np.uint8)
+        # Convert the images to NumPy arrays
+        first_image = np.array(first_image, dtype=np.uint8)
+        second_image = np.array(second_image, dtype=np.uint8)
 
-    for k in range(channel):
+        # Create a new NumPy array with the same dimensions as the images
+        new_image = np.zeros((row, column, 3), dtype=np.uint8)
+
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_image[i, j, k] = first_image[i, j, k] + second_image[i, j, k]
+
+        new_image = normalization(new_image)
+        return new_image
+
+    elif len(first_image.shape) == 2 and len(second_image.shape) == 2:
+        # Grayscale images
+        row, column = first_image.shape
+        row2, column2 = second_image.shape
+
+        # Make sure the two images have the same dimensions
+        second_image = reverse_mapping_1Order(
+            second_image,
+            max(row, row2) // min(row, row2),
+            max(column, column2) // min(column, column)
+        )
+
+        # Convert the images to NumPy arrays
+        first_image = np.array(first_image, dtype=np.uint8)
+        second_image = np.array(second_image, dtype=np.uint8)
+
+        # Create a new NumPy array with the same dimensions as the images
+        new_image = np.zeros((row, column), dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_image[i, j, k] = first_image[i, j, k] + second_image[i, j, k]
+                new_image[i, j] = first_image[i, j] + second_image[i, j]
 
-    new_image = contrast_adjustment(new_image, new_min=0, new_max=255)
-
-    return new_image
+        new_image = normalization(new_image)
+        return new_image
 
 
 # endregion
