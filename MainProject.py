@@ -344,25 +344,46 @@ def histogram_plot(image):
 # Second parameter: New value as maximum
 # Third parameter: New value as minimum
 def contrast_adjustment(image, new_min, new_max):
-    [row, column, channel] = image.shape
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
 
-    # Find the minimum and maximum intensity values across the image.
-    old_min = np.amin(image, axis=(0, 1))
-    old_max = np.amax(image, axis=(0, 1))
+        # Find the minimum and maximum intensity values across the image.
+        old_min = np.amin(image, axis=(0, 1))
+        old_max = np.amax(image, axis=(0, 1))
 
-    new_image = np.zeros([row, column, channel], dtype=np.uint8)
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
 
-    for k in range(channel):
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_value = ((image[i, j, k] - old_min[k]) / (old_max[k] - old_min[k])) * (new_max - new_min) + new_min
+                    if new_value > 255:
+                        new_value = 255
+                    if new_value < 0:
+                        new_value = 0
+                    new_image[i, j, k] = new_value
+
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+
+        # Find the minimum and maximum intensity values across the image.
+        old_min = np.amin(image, axis=(0, 1))
+        old_max = np.amax(image, axis=(0, 1))
+
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_value = ((image[i, j, k] - old_min[k]) / (old_max[k] - old_min[k])) * (new_max - new_min) + new_min
+                new_value = ((image[i, j] - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
                 if new_value > 255:
                     new_value = 255
                 if new_value < 0:
                     new_value = 0
-                new_image[i, j, k] = new_value
+                new_image[i, j] = new_value
 
-    return new_image
+        return new_image
 
 
 # endregion
