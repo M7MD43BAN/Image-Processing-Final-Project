@@ -732,6 +732,7 @@ def average_filter(image, mask_size):
 
     for i in range(padding, row + padding):
         for j in range(padding, column + padding):
+            # Get the current 3x3 pixel mask
             mask = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
 
             mask_mean = np.sum(mask) / (mask_size ** 2)
@@ -773,6 +774,70 @@ def gaussian_filter(image, size, sigma):
 
 # endregion
 
+# region Max Filter
+
+def max_filter(image, mask_size):
+    [row, column] = image.shape
+    new_image = np.zeros([row, column], dtype=np.uint8)
+
+    padding = mask_size // 2
+    padded_image = cv2.copyMakeBorder(image, padding, padding, padding, padding, cv2.BORDER_REPLICATE)
+
+    for i in range(padding, row + padding):
+        for j in range(padding, column + padding):
+            # Get the current 3x3 pixel mask
+            mask = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
+            new_pixel = int(np.max(mask))
+            new_image[i - padding, j - padding] = new_pixel
+
+    return new_image
+
+
+# endregion
+
+# region Min Filter
+
+def min_filter(image, mask_size):
+    [row, column] = image.shape
+    new_image = np.zeros([row, column], dtype=np.uint8)
+
+    padding = mask_size // 2
+    padded_image = cv2.copyMakeBorder(image, padding, padding, padding, padding, cv2.BORDER_REPLICATE)
+
+    for i in range(padding, row + padding):
+        for j in range(padding, column + padding):
+            # Get the current 3x3 pixel mask
+            mask = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
+            new_pixel = int(np.min(mask))
+            new_image[i - padding, j - padding] = new_pixel
+
+    return new_image
+
+
+# endregion
+
+# region Median Filter
+
+def median_filter(image, mask_size):
+    [row, column] = image.shape
+    new_image = np.zeros([row, column], dtype=np.uint8)
+
+    padding = mask_size // 2
+    padded_image = cv2.copyMakeBorder(image, padding, padding, padding, padding, cv2.BORDER_REPLICATE)
+
+    for i in range(padding, row + padding):
+        for j in range(padding, column + padding):
+            # Get the current 3x3 pixel mask
+            mask = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
+            mask = np.sort(mask)
+            new_pixel = int(np.median(mask))
+            new_image[i - padding, j - padding] = new_pixel
+
+    return new_image
+
+
+# endregion
+
 # region Sharpening Filter
 
 def sharpening(image):
@@ -805,24 +870,39 @@ def sharpening(image):
 
     for i in range(padding, row + padding):
         for j in range(padding, column + padding):
-            # Convolution
-            window = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
+            # Get the current 3x3 pixel mask
+            mask = padded_image[i - padding:i + padding + 1, j - padding:j + padding + 1]
 
-            # Horizontal Filter
-            horizontal_result = (window * horizontal_filter).sum()
-            new_image1[i - padding, j - padding] = abs(horizontal_result)
+            # Apply each filter to the window and calculate the gradient
+            horizontal_gradient = np.sum(np.multiply(mask, horizontal_filter))
+            if horizontal_gradient > 255:
+                horizontal_gradient = 255
+            if horizontal_gradient < 0:
+                horizontal_gradient = 0
 
-            # Vertical Filter
-            vertical_result = (window * vertical_filter).sum()
-            new_image2[i - padding, j - padding] = abs(vertical_result)
+            vertical_gradient = np.sum(np.multiply(mask, vertical_filter))
+            if vertical_gradient > 255:
+                vertical_gradient = 255
+            if vertical_gradient < 0:
+                vertical_gradient = 0
 
-            # Diagonal Filter 1
-            diagonal1_result = (window * diagonal1_filter).sum()
-            new_image3[i - padding, j - padding] = abs(diagonal1_result)
+            diagonal1_gradient = np.sum(np.multiply(mask, diagonal1_filter))
+            if diagonal1_gradient > 255:
+                diagonal1_gradient = 255
+            if diagonal1_gradient < 0:
+                diagonal1_gradient = 0
 
-            # Diagonal Filter 2
-            diagonal2_result = (window * diagonal2_filter).sum()
-            new_image4[i - padding, j - padding] = abs(diagonal2_result)
+            diagonal2_gradient = np.sum(np.multiply(mask, diagonal2_filter))
+            if diagonal2_gradient > 255:
+                diagonal2_gradient = 255
+            if diagonal2_gradient < 0:
+                diagonal2_gradient = 0
+
+            # Set the value of the new images based on the gradient values
+            new_image1[i - padding, j - padding] = np.abs(horizontal_gradient)
+            new_image2[i - padding, j - padding] = np.abs(vertical_gradient)
+            new_image3[i - padding, j - padding] = np.abs(diagonal1_gradient)
+            new_image4[i - padding, j - padding] = np.abs(diagonal2_gradient)
 
     # combining four different line edge detection filters (horizontal, vertical, and two diagonal filters)
     # using bitwise OR operations.
@@ -887,7 +967,7 @@ def edge_detection(image):
 
     final_image = final_image.astype(np.uint8)
 
-    return final_image
+    return normalization(final_image)
 
 
 # endregion
