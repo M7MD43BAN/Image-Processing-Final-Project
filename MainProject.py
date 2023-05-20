@@ -328,10 +328,13 @@ def reverse_mapping_1Order(image, row_factor, column_factor):
 # First parameter: Input image that will be converted
 
 def convert_to_gray(rgb_image):
-    # Convert the RGB image to grayscale using the formula: gray = 0.3RED + 0.59GREEN + 0.11BLUE
-    gray_image = (0.3 * rgb_image[:, :, 0]) + (0.59 * rgb_image[:, :, 1]) + (0.11 * rgb_image[:, :, 2])
+    if len(rgb_image.shape) == 3:
+        # Convert the RGB image to grayscale using the formula: gray = 0.3RED + 0.59GREEN + 0.11BLUE
+        gray_image = (0.3 * rgb_image[:, :, 0]) + (0.59 * rgb_image[:, :, 1]) + (0.11 * rgb_image[:, :, 2])
 
-    return gray_image.astype(np.uint8)
+        return gray_image.astype(np.uint8)
+
+    return rgb_image
 
 
 # endregion
@@ -545,21 +548,39 @@ def power_law(image, gamma):
 # Create a function for histogram plot
 # First parameter: Input image that will be adjustment
 def histogram_equalization(image):
-    number_of_pixels = histogram_plot(image)
+    if len(image.shape) == 2:  # Grayscale image
+        number_of_pixels = histogram_plot(image)
 
-    # Calculate running sum
-    running_sum = np.zeros(256, dtype=int)
-    running_sum[0] = number_of_pixels[0]
-    for i in range(1, 256):
-        running_sum[i] = running_sum[i - 1] + number_of_pixels[i]
+        # Calculate running sum
+        running_sum = np.zeros(256, dtype=int)
+        running_sum[0] = number_of_pixels[0]
+        for i in range(1, 256):
+            running_sum[i] = running_sum[i - 1] + number_of_pixels[i]
 
-    # Calculate histogram equalization
-    pixels_sum = number_of_pixels.sum()
-    equalized_values = np.zeros(256, dtype=int)
-    for i in range(256):
-        equalized_values[i] = round((255 * running_sum[i]) / pixels_sum)
+        # Calculate histogram equalization
+        pixels_sum = number_of_pixels.sum()
+        equalized_values = np.zeros(256, dtype=int)
+        for i in range(256):
+            equalized_values[i] = round((255 * running_sum[i]) / pixels_sum)
 
-    return equalized_values, number_of_pixels
+        return equalized_values, number_of_pixels
+
+    elif len(image.shape) == 3:  # RGB image
+        # Split RGB channels
+        red_channel = image[:, :, 0]
+        green_channel = image[:, :, 1]
+        blue_channel = image[:, :, 2]
+
+        # Perform histogram equalization on each channel
+        red_equalized, red_pixels = histogram_equalization(red_channel)
+        green_equalized, green_pixels = histogram_equalization(green_channel)
+        blue_equalized, blue_pixels = histogram_equalization(blue_channel)
+
+        # Create equalized RGB image
+        equalized_channels = (red_equalized, green_equalized, blue_equalized)
+        channel_histograms = (red_pixels, green_pixels, blue_pixels)
+
+        return equalized_channels, channel_histograms
 
 
 # endregion
