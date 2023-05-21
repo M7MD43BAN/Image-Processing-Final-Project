@@ -690,9 +690,6 @@ def add_two_images(first_image, second_image):
 
 # region Subtract Two Images
 
-# Create a function for adding image to another image
-# First parameter: Input image that will be the original
-# Second parameter: Input image that will be the added image as a watermark
 def subtract_two_images(first_image, second_image):
     if len(first_image.shape) == 3 and len(second_image.shape) == 3:
 
@@ -748,7 +745,6 @@ def subtract_two_images(first_image, second_image):
 
 # Create a function for adding image to another image
 # First parameter: Input image that will be the original
-# Second parameter: Input image that will be the added image as a watermark
 def negative_image(image):
     if len(image.shape) == 3:
         [row, column, channel] = image.shape
@@ -837,16 +833,16 @@ def average_filter(image, mask_size):
 
 def gaussian_kernel(size, sigma):
     x, y = np.meshgrid(np.arange(-size // 2 + 1, size // 2 + 1), np.arange(-size // 2 + 1, size // 2 + 1))
-    kernel = np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2)) / (2 * np.pi * sigma ** 2)
+    mask = np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2)) / (2 * np.pi * sigma ** 2)
 
-    return kernel / np.sum(kernel)
+    return mask / np.sum(mask)
 
 
 def gaussian_filter(image, size, sigma):
     [row, column] = image.shape
     new_image = np.zeros([row, column], dtype=np.float32)
 
-    kernel = gaussian_kernel(size, sigma)
+    mask = gaussian_kernel(size, sigma)
 
     padding = size // 2
     padded_image = cv2.copyMakeBorder(image, padding, padding, padding, padding, cv2.BORDER_REFLECT)
@@ -855,7 +851,7 @@ def gaussian_filter(image, size, sigma):
     for i in range(row):
         for j in range(column):
             neighbor_pixels = padded_image[i:i + size, j:j + size]
-            weighted_pixels = neighbor_pixels * kernel
+            weighted_pixels = neighbor_pixels * mask
 
             new_image[i, j] = np.sum(weighted_pixels)
 
