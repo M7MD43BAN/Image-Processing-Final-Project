@@ -588,24 +588,46 @@ def histogram_equalization(image):
 # region Histogram Matching
 
 def histogram_matching(first_image, second_image):
-    # Compute histograms equalization of the input images
-    equalization1, number_of_pixels_of_image1 = histogram_equalization(first_image)
-    equalization2, number_of_pixels_of_image2 = histogram_equalization(second_image)
+    if len(first_image.shape) == 2 and len(second_image.shape) == 2:  # Grayscale images
+        # Compute histograms equalization of the input images
+        equalization1, number_of_pixels_of_image1 = histogram_equalization(first_image)
+        equalization2, number_of_pixels_of_image2 = histogram_equalization(second_image)
 
-    # Create a lookup table to map intensity levels from img to img2
-    matching = np.zeros((256,), dtype=np.uint8)
-    for i in range(256):
-        diff = np.abs(equalization1[i] - equalization2)
-        ind = np.argmin(diff)
-        matching[i] = ind
+        # Create a lookup table to map intensity levels from img to img2
+        matching = np.zeros((256,), dtype=np.uint8)
+        for i in range(256):
+            diff = np.abs(equalization1[i] - equalization2)
+            ind = np.argmin(diff)
+            matching[i] = ind
 
-    # Apply the matching to the input image
-    new_image = matching[first_image]
+        # Apply the matching to the input image
+        new_image = matching[first_image]
 
-    # Compute histogram of the output image
-    new_image_histogram = histogram_plot(new_image)
+        # Compute histogram of the output image
+        new_image_histogram = histogram_plot(new_image)
 
-    return new_image, new_image_histogram
+        return new_image, new_image_histogram
+
+    elif len(first_image.shape) == 3 and len(second_image.shape) == 3:
+        # Split RGB channels
+        red_channel_1 = first_image[:, :, 0]
+        green_channel_1 = first_image[:, :, 1]
+        blue_channel_1 = first_image[:, :, 2]
+
+        red_channel_2 = second_image[:, :, 0]
+        green_channel_2 = second_image[:, :, 1]
+        blue_channel_2 = second_image[:, :, 2]
+
+        # Perform histogram matching on each channel
+        new_red_channel, red_histogram = histogram_matching(red_channel_1, red_channel_2)
+        new_green_channel, green_histogram = histogram_matching(green_channel_1, green_channel_2)
+        new_blue_channel, blue_histogram = histogram_matching(blue_channel_1, blue_channel_2)
+
+        # Create matched RGB image
+        matched_image = cv2.merge([new_red_channel, new_green_channel, new_blue_channel]).astype(np.uint8)
+        channel_histograms = (red_histogram, green_histogram, blue_histogram)
+
+        return matched_image, channel_histograms
 
 
 # endregion
@@ -622,11 +644,7 @@ def add_two_images(first_image, second_image):
         [row2, column2, channel2] = second_image.shape
 
         # Make sure the two images have the same dimensions
-        second_image = reverse_mapping_1Order(
-            second_image,
-            max(row, row2) // min(row, row2),
-            max(column, column2) // min(column, column)
-        )
+        second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
 
         # Convert the images to NumPy arrays
         first_image = np.array(first_image, dtype=np.uint8)
@@ -641,6 +659,7 @@ def add_two_images(first_image, second_image):
                     new_image[i, j, k] = first_image[i, j, k] + second_image[i, j, k]
 
         new_image = normalization(new_image)
+
         return new_image
 
     elif len(first_image.shape) == 2 and len(second_image.shape) == 2:
@@ -649,11 +668,7 @@ def add_two_images(first_image, second_image):
         row2, column2 = second_image.shape
 
         # Make sure the two images have the same dimensions
-        second_image = reverse_mapping_1Order(
-            second_image,
-            max(row, row2) // min(row, row2),
-            max(column, column2) // min(column, column)
-        )
+        second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
 
         # Convert the images to NumPy arrays
         first_image = np.array(first_image, dtype=np.uint8)
@@ -667,6 +682,7 @@ def add_two_images(first_image, second_image):
                 new_image[i, j] = first_image[i, j] + second_image[i, j]
 
         new_image = normalization(new_image)
+
         return new_image
 
 
@@ -678,26 +694,52 @@ def add_two_images(first_image, second_image):
 # First parameter: Input image that will be the original
 # Second parameter: Input image that will be the added image as a watermark
 def subtract_two_images(first_image, second_image):
-    [row, column, channel] = first_image.shape
+    if len(first_image.shape) == 3 and len(second_image.shape) == 3:
 
-    # Make sure the two images have the same dimensions
-    second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
+        [row, column, channel] = first_image.shape
+        [row2, column2, channel2] = second_image.shape
 
-    # Convert the images to NumPy arrays
-    first_image = np.array(first_image, dtype=np.uint8)
-    second_image = np.array(second_image, dtype=np.uint8)
+        # Make sure the two images have the same dimensions
+        second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
 
-    # Create a new NumPy array with the same dimensions as the images
-    new_image = np.zeros((first_image.shape[0], first_image.shape[1], 3), dtype=np.uint8)
+        # Convert the images to NumPy arrays
+        first_image = np.array(first_image, dtype=np.uint8)
+        second_image = np.array(second_image, dtype=np.uint8)
 
-    for k in range(channel):
+        # Create a new NumPy array with the same dimensions as the images
+        new_image = np.zeros((row, column, 3), dtype=np.uint8)
+
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_image[i, j, k] = first_image[i, j, k] - second_image[i, j, k]
+
+        new_image = normalization(new_image)
+
+        return new_image
+
+    elif len(first_image.shape) == 2 and len(second_image.shape) == 2:
+        # Grayscale images
+        row, column = first_image.shape
+        row2, column2 = second_image.shape
+
+        # Make sure the two images have the same dimensions
+        second_image = cv2.resize(second_image, (first_image.shape[1], first_image.shape[0]))
+
+        # Convert the images to NumPy arrays
+        first_image = np.array(first_image, dtype=np.uint8)
+        second_image = np.array(second_image, dtype=np.uint8)
+
+        # Create a new NumPy array with the same dimensions as the images
+        new_image = np.zeros((row, column), dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_image[i, j, k] = np.abs(first_image[i, j, k] - second_image[i, j, k])
+                new_image[i, j] = first_image[i, j] - second_image[i, j]
 
-    new_image = contrast_adjustment(new_image, new_min=0, new_max=255)
+        new_image = normalization(new_image)
 
-    return new_image
+        return new_image
 
 
 # endregion
@@ -708,13 +750,24 @@ def subtract_two_images(first_image, second_image):
 # First parameter: Input image that will be the original
 # Second parameter: Input image that will be the added image as a watermark
 def negative_image(image):
-    [row, column, channel] = image.shape
-    new_image = np.zeros([row, column, channel], dtype=np.uint8)
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
 
-    for k in range(channel):
+        for k in range(channel):
+            for i in range(row):
+                for j in range(column):
+                    new_image[i, j, k] = 255 - image[i, j, k]
+
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
         for i in range(row):
             for j in range(column):
-                new_image[i, j, k] = 255 - image[i, j, k]
+                new_image[i, j] = 255 - image[i, j]
 
     return new_image
 
@@ -724,20 +777,36 @@ def negative_image(image):
 # region Quantization
 
 def quantization(image, number_of_bits):
-    [row, column, channel] = image.shape
-    new_image = np.zeros([row, column, channel], dtype=np.uint8)
+    if len(image.shape) == 3:
+        [row, column, channel] = image.shape
+        new_image = np.zeros([row, column, channel], dtype=np.uint8)
 
-    gray_level = 2 ** number_of_bits
-    gap = int(256 / gray_level)
-    colors = range(0, 256, gap)
+        gray_level = 2 ** number_of_bits
+        gap = int(256 / gray_level)
+        colors = range(0, 256, gap)
 
-    for k in range(0, channel):
+        for k in range(0, channel):
+            for r in range(0, row):
+                for c in range(0, column):
+                    new_pixel = image[r, c, k] // gap
+                    new_image[r, c, k] = colors[new_pixel]
+
+        return new_image
+
+    elif len(image.shape) == 2:
+        [row, column] = image.shape
+        new_image = np.zeros([row, column], dtype=np.uint8)
+
+        gray_level = 2 ** number_of_bits
+        gap = int(256 / gray_level)
+        colors = range(0, 256, gap)
+
         for r in range(0, row):
             for c in range(0, column):
-                new_pixel = image[r, c, k] // gap
-                new_image[r, c, k] = colors[new_pixel]
+                new_pixel = image[r, c] // gap
+                new_image[r, c] = colors[new_pixel]
 
-    return new_image
+        return new_image
 
 
 # endregion
